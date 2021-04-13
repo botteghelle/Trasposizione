@@ -1,0 +1,84 @@
+
+
+data x; 
+x = 2;
+output ; 
+x =4 ;
+output ; 
+x =6;
+output ;
+x =8;
+output;
+run ;
+
+/* the vector is suposed to have x as name of column */
+%global S;
+%global n;
+%global var_1;
+%global var_2;
+%global var_3;
+%global var_4;
+
+%macro Boole_sum (x) ;    /* please refer to x as numerico column  */
+
+proc sql noprint; 
+select sum(x)  into : S from x;
+select count(*)  into : n from x ;
+quit ; 
+
+%if &S > 1 %then %do ;
+
+%put condition S>1 entered ;
+%let iteration = 0; /* please look at comment iteration =1*/
+data x_derived;
+set x; 
+
+run ; 
+
+%end;
+
+data prova;
+  set  x_derived;
+  col_command ="let var_"!!trim(put(_n_ , 8. -l))!!" = "!!trim(put(x , 8.))!!";"; 
+  call execute("%"!!col_command) ; 
+run ; 
+%let iteration =1;
+*iteration =1 in the beinning, with 1 you have "two columns" 
+like the two lines in R (see the point cmbn(x,2) = in Paul s mail ;  
+/*
+data combined_x;
+format x y best8.;
+stop;
+run;
+*/
+
+data combined_x_&iteration ; 
+   %do I=&iteration %to %eval(&n-1);
+   x= trim(put(&&var_&I, best8.));
+   %let I_plus_one = %eval(&I+1);
+     %do sub_I = &I_plus_one %to &n;
+     x_&iteration = trim(put(&&var_&sub_I, best8.));
+     output;
+	 %end;
+   %end;
+run;	  
+ 
+
+%let iteration =2;
+data combined_x_&iteration ;
+%do I = &iteration %to %eval(&n); 
+	/*%let taking_the_right_var =  %eval(&iteration+2);*/ 
+
+	x_&iteration = &&var_&I;
+	output;
+%end ; 
+run;	  
+
+
+   /*stop before the macro if you want to see the origianal values of var_&I )*/
+   
+%mend Boole_sum; 
+
+%Boole_sum(x=x);
+
+
